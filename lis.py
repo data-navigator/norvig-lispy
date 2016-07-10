@@ -1,9 +1,27 @@
 """Implementing a Scheme interpreter in Python."""
 
-Env = dict             # An environment is a mapping of {variable: value}
+#Env = dict             # An environment is a mapping of {variable: value}
 Symbol = str           # A Scheme Symbol equals Python str
 List = list            # A Scheme List equals a Python list
 Number = (int, float)  # A Scheme Number equals a Python int or float
+
+
+class Procedure(object):
+    """A user-defined Scheme Procedure"""
+    def __init__(self, parms, body, env):
+        self.parms, self.body, self.env = parms, body, env
+    def __call__(self, *args):
+        return eval(self.body, Env(self.parms, args, self.env))
+
+
+class Env(dict):
+    """An environment: a dict of {'var':val} pairs, with an outer Env."""
+    def __init__(self, parms=(), args=(), outer=None):
+        self.update(zip(parms, args))
+        self.outer = outer
+    def find(self, var):
+        "Find the innermost Env where var appears"
+        return self if (var in self) else self.outer.find(var)
 
 
 def standard_env():
@@ -108,9 +126,12 @@ def eval(x, env=global_env):
     procedure is applied to the list of arg values.
     Example: (sqrt (* 2 8)) ⇒ 4.0"""
     if isinstance(x, Symbol):
-        return env[x]
+        return env.find(x)[x]
     elif not isinstance(x, List):
         return x
+    elif x[0] == 'quote':          # quotation
+        (_, exp) = x
+        return exp
     elif x[0] == 'if':
         (_, test, conseq, alt) = x  # Tuple unpack
         exp = (conseq if eval(test, env) else alt)
@@ -118,6 +139,12 @@ def eval(x, env=global_env):
     elif x[0] == 'define':
         (_, var, exp) = x
         env[var] = eval(exp, env)
+    elif x[0] == 'set!':           # assignment
+        (_, var, exp) = x
+        env.find(var)[var] = eval(exp, env)
+    elif x[0] == 'lambda':         # procedure
+        (_, parms, body) = x
+        return Procedure(parms, body, env)
     else:
         proc = eval(x[0], env)
         args = [eval(arg, env) for arg in x[1:]]
@@ -128,6 +155,8 @@ def schemestr(exp):
     """Convert a Python object back into a Scheme-readable string"""
     if isinstance(exp, list):
         return '(' + ' '.join(map(schemestr, exp)) + ')'
+    if isinstance(exp, map):
+        return list(exp)
     else:
         return str(exp)
 
