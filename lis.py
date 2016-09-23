@@ -28,7 +28,7 @@ def standard_env():
     """An environment with some Scheme standard prodcedures"""
     import math  # Map the functions in the math module to the Env instance
     import operator  # Map the functions in the operator module to their symbol
-    env = Env()  # new dict as an Env instance
+    env = Env()  # new Env instance
     env.update(vars(math))  # sin, cos, sqrt, pi ...
     env.update({
         '+': operator.add,
